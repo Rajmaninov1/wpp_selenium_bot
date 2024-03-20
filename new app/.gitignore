@@ -1,0 +1,10 @@
+env/
+.env/
+venv/
+venv_/
+.venv/
+.idea/
+**/.env
+**/dev.env
+**/test.env
+**/prod.env

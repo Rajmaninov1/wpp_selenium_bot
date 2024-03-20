@@ -35,7 +35,6 @@ class SpreadSheet:
             else:
                 pass
 
-
     def get_sheets_names(self):
         """ """
         return [row.title for row in self.sheets.worksheets()]
@@ -104,7 +103,7 @@ class SpreadSheet:
         )
 
     def update_response_verification_column(
-        self, response_verifications, sheet_name=None
+            self, response_verifications, sheet_name=None
     ):
         """ """
         self.sheet_verification(sheet_name)
@@ -126,8 +125,4 @@ class SpreadSheet:
     def update_sheet_cell(self, row, col, value, sheet_name=None):
         """ """
         self.sheet_verification(sheet_name)
-        self.sheets.get_worksheet(self.sheet_number).update_cell(row, col, value)#actualizar línea
-
-    def get_sheets_names(self):
-        """ """
-        return [row.title for row in self.sheets.worksheets()]
+        self.sheets.get_worksheet(self.sheet_number).update_cell(row, col, value)  # actualizar línea
