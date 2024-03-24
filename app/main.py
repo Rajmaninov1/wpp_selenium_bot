@@ -1,63 +1,72 @@
-import os
-import pprint
+import logging
+from contextlib import asynccontextmanager
 
 import uvicorn
-from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from starlette.middleware.exceptions import ExceptionMiddleware
 
-from fastapi import BackgroundTasks, FastAPI
-from fastapi_sqlalchemy import DBSessionMiddleware, db
+from config.logger_factory import logger_factory
+from config.settings import settings, Environment
+from middleware.middlewares import add_error_handlers
+from routers.routers import add_routers
 
-from maps_bot.bot import MapsBot
-from maps_bot.schema import Lead
-from wpp_bot.bot import WppBot
+logger = logging.getLogger('_api_')
 
-load_dotenv('../docker/fastapi/.env')
+# Configure logging
+logger_factory()
 
-
-app = FastAPI()
-
-app.add_middleware(DBSessionMiddleware, db_url=os.environ['DATABASE_URL'])
-
-def send_message_to_whatsapp_task(spreadsheet: str, sheet: str, text: str, path: str):
-    with open("log_wpp.txt", mode="w") as file:
-        spreadsheet = "MarkeBot"
-        sheet = "Hoja_de_pruebas"
-        text = "Hola, soy un bot"
-        path = "private_files/images/growth.jpg"
-
-        wpp_bot = WppBot(spreadsheet, sheet)
-        history = wpp_bot.send_messages_to_sheet_numbers(sheet, text, path)
-        pprint.pprint(history, stream=file)
-        print("process finished")
-
-def google_maps_search_task(search_text: str):
-    with open("log_maps.txt", mode="w") as file:
-        maps_bot = MapsBot()
-        results = maps_bot.search(search_text)
-        pprint.pprint(results, stream=file)
-        db_lead = Lead(
-            name=results["name"],
-            score=results["score"],
-            number_of_opinions=results["number_of_opinions"],
-            phone_number=results["phone_number"],
-            website=results["website"],
-            email=results["email"],
-            country_scraped="Colombia"
-        )
-        db.session.add(db_lead)
-        db.session.commit()
-        print("process finished")
-
-@app.get("/fastapi/send_messages/")
-async def send_messages(spreadsheet: str, sheet: str, text: str, path: str, background_tasks: BackgroundTasks):
-    background_tasks.add_task(send_message_to_whatsapp_task, spreadsheet, sheet, text, path)
-    return {"message": "Search started! The results will be found in the log_wpp.txt file."}
-
-@app.get("/maps_bot/search/")
-async def search(search_text: str, background_tasks: BackgroundTasks):
-    background_tasks.add_task(google_maps_search_task, search_text=search_text)
-    return {"message": "Search started! The results will be found in the log_maps.txt file."}
+# Configure FastAPI
+if settings.ENVIRONMENT != Environment.PROD:
+    settings.WEB_APP_DESCRIPTION = f'## ENV: {settings.ENVIRONMENT}\n\n{settings.WEB_APP_DESCRIPTION}'
 
 
-if __name__ == '__main__':
-    uvicorn.run(app, port=8000, host='0.0.0.0')
+@asynccontextmanager
+async def lifespan(lifespan_app: FastAPI):
+    # Force to build middleware stack for all apps and fill the
+    # "middleware_stack" property
+    client = TestClient(app)
+    # Main app
+    client.get('/docs?__lifespan__start__')
+    # Sub apps
+    # client.get('/admin/docs?__lifespan__start__')
+
+    for current_app in [app]:
+        if not current_app:
+            continue
+        # Hack ExceptionMiddleware to handle (500 or Exception) errors
+        # Override on startup because is the moment when the middleware_stack was built
+        # Breaking change, only works from 0.91.0 to upper: https://fastapi.tiangolo.com/release-notes/#0910
+        generic_exception_handlers = {
+            k: v for k, v in current_app.exception_handlers.items() if k == 500 or k == Exception}  # noqa
+        if generic_exception_handlers:
+            _app = current_app.middleware_stack
+            while True:
+                if isinstance(_app, ExceptionMiddleware):
+                    _app._exception_handlers.update(generic_exception_handlers)  # noqa
+                    break
+                elif hasattr(_app, 'app'):
+                    _app = _app.app
+                else:
+                    break
+    yield
+
+app = FastAPI(
+    title=settings.WEB_APP_TITLE,
+    description=settings.WEB_APP_DESCRIPTION,
+    version=settings.WEB_APP_VERSION,
+    servers=[
+        {'url': settings.OPENAPI_SERVER, 'description': f'{settings.ENVIRONMENT} environment'},
+    ] if settings.OPENAPI_SERVER else None,
+    lifespan=lifespan
+)
+
+# Configure HTTP Starlette server
+add_error_handlers(app)
+
+# Configure routes
+add_routers(app)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

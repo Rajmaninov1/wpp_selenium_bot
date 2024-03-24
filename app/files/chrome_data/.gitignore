@@ -1,0 +1,5 @@
+*
+*/
+ChromeProfile/*
+!ChromeProfile/
+!.gitignore
