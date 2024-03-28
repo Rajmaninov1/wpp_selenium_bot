@@ -1,0 +1,33 @@
+services:
+  web:     # aims to the .DockerFile file on current directory
+    build: .
+    ports:
+      -"8000:8000"
+
+  postgres:
+    image: "postgres:latest"
+    container_name: "postgres"
+    hostname: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./docker/postgres/.env
+  
+  chrome:                # from https://github.com/SeleniumHQ/docker-selenium/blob/trunk/docker-compose-v3.yml
+    image: selenium/node-chrome:4.19.0-20240328
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+  
+  selenium-hub:
+    image: selenium/hub:4.19.0-20240328
+    container_name: selenium-hub
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "4444:4444"
