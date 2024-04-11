@@ -1,11 +1,12 @@
 import base64
 import os
 import sys
+import time
 from pathlib import Path
 
 from alright import WhatsApp, LOGGER
 from fake_http_header import FakeHttpHeader
-from selenium.common.exceptions import StaleElementReferenceException, NoSuchElementException
+from selenium.common.exceptions import StaleElementReferenceException, NoSuchElementException, TimeoutException
 from selenium import webdriver
 from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.chrome.options import Options
@@ -15,7 +16,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 
-from app.config.settings import settings, Environment
+from config.settings import settings, Environment
 from schemas.wpp_web_bot.html_wpp_identifiers import HtmlWppXpaths, JavaScriptWppScripts
 from schemas.wpp_web_bot.media_types import MediaTypesEnum
 
@@ -27,7 +28,7 @@ class WppWrapper(WhatsApp):
     """
     Selenium Wrapper for WhatsApp Web. Base code and documentation can be found at https://github.com/Kalebu/alright
     """
-    def __init__(self, browser: WebDriver | None = None, time_out: int = 90):  # noqa
+    def __init__(self, browser: WebDriver | None = None, time_out: int = 10):  # noqa
         # web.open(f"https://web.whatsapp.com/send?phone={phone_no}&text={quote(message)}")
 
         self.browser_open = True
@@ -67,7 +68,7 @@ class WppWrapper(WhatsApp):
                 f'--user-data-dir={os.path.abspath(os.getcwd())}/files/chrome_data/ChromeProfile')
         else:
             chrome_options.add_argument('--start-maximized')
-            chrome_options.add_argument('--user-data-dir=/home/seluser/chrome_data/UserData')
+            chrome_options.add_argument('--user-data-dir=/tmp/seluser/chrome_data/UserData')
         chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         chrome_options.add_experimental_option(
@@ -282,6 +283,54 @@ class WppWrapper(WhatsApp):
                 (By.XPATH, HtmlWppXpaths.CLOCK_MESSAGE_STATE_XPATH)
             )
         )
+    
+    def get_messages(self):
+        """
+        To get the message browser state must be in the desired user
+        E.I: call find_user() method first to sert the state to the 
+        desired user
+        """ 
+        try:
+
+            container = self.wait.until(
+                expected_conditions.presence_of_element_located(
+                    (By.XPATH, HtmlWppXpaths.MESSAGES_CONTAINER)
+                )
+            )
+
+            while True:
+                # Scroll to the top of the container
+                container.send_keys(Keys.HOME)
+                # Wait for some time to let the scroll action take effect
+                time.sleep(0)  # Adjust the sleep duration as needed
+                # Check if we are at the top of the container
+                if container.get_attribute('scrollTop') == '0':
+                    break  # If at the top, break the loop
+
+            clean_messages = []
+
+            for n in range(1,100):        
+                xpath = f'//*[@id="main"]/div[3]/div/div[2]/div[3]/div[{n}]//*[@aria-label]'  # TODO: Convert to lamda func
+                message = self.wait.until(
+                    expected_conditions.presence_of_element_located(
+                        (By.XPATH, xpath)
+                    )
+                )
+
+                label = message.get_attribute("aria-label")
+
+                if(label == ""):
+                    continue
+
+                clean_message = {
+                    "content": label
+                }                
+
+                clean_messages.append(clean_message)
+        except TimeoutException:
+            return clean_messages
+        except Exception as bug:
+            return { "message": f'failded ---> {bug}' }
 
     @staticmethod
     def _generate_new_headers() -> FakeHttpHeader:
