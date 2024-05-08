@@ -8,3 +8,5 @@ venv_/
 **/dev.env
 **/test.env
 **/prod.env
+Pipfile
+Pipfile.lock
