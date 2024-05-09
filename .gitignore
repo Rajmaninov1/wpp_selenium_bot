@@ -3,6 +3,7 @@ env/
 venv/
 venv_/
 .venv/
+.venv_jt/
 .idea/
 **/.env
 **/dev.env

@@ -1,3 +1,4 @@
 IMGS_LOCATION = 'files/imgs/'
 VIDEOS_LOCATION = 'files/videos/'
 FILES_LOCATION = 'files/files/'
+KINESIS_FIREHOSE_MAX_RECORDS = 1000
