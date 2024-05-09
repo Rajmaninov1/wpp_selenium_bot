@@ -1,0 +1,12 @@
+services:
+  linkebot_api:
+    build:
+      context: .
+    ports:
+      - "3000:80"
+      - "7900:7900"
+      - "4444:4444"
+      - "8000:8000"
+    volumes:
+      - ./:/code/app
+    

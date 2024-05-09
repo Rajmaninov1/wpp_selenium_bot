@@ -26,6 +26,8 @@ class HtmlWppXpaths(str, Enum):
                          'div[2]/div[1]/div[1]')
     SEND_BUTTON_XPATH = '//*[@id="app"]/div/div[2]/div[2]/div[2]/span/div/span/div/div/div[2]/div/div[2]/div[2]/div/div'
 
+    MESSAGES_CONTAINER = '//*[@id="main"]/div[3]/div/div[2]'
+
 
 class JavaScriptWppScripts(str, Enum):
     GET_QR_IMG = 'return arguments[0].toDataURL("image/png").substring(22);'
