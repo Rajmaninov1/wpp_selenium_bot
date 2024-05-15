@@ -1,8 +1,8 @@
 import boto3
 from pydantic import BaseModel
 
-from app.config.settings import settings
-from constants import KINESIS_FIREHOSE_MAX_RECORDS
+from config.settings import settings
+from config.constants import KINESIS_FIREHOSE_MAX_RECORDS
 from services.aws_kinesis.data_streams import KinesisStream
 
 

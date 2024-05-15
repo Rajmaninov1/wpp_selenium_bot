@@ -15,7 +15,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 
-from app.config.settings import settings, Environment
+from config.settings import settings, Environment
 from schemas.wpp_web_bot.html_wpp_identifiers import HtmlWppXpaths, JavaScriptWppScripts
 from schemas.wpp_web_bot.media_types import MediaTypesEnum
 

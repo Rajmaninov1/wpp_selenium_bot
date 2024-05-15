@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+
+  chrome:
+    image: "selenium/standalone-chrome:latest"
+    container_name: "chrome"
+    hostname: chrome
+    shm_size: '2gb'
+    # restart: always
+    ports:
+      - "4444:4444"
+
+  bot:
+      container_name: bot
+      restart: always
+      build:
+        context: .
+        dockerfile: ./docker/fastapi+selenium/Dockerfile
+      env_file:
+        - ./docker/fastapi+selenium/dev.env
+      volumes:
+        - app_volume:/app:z
+      depends_on:
+        - chrome
+      ports:
+        - "8000:8000"
+
+volumes:
+  app_volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./app
